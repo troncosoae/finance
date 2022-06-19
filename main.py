@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # po.add_index('ezu')
 
     an = Analyzer()
-    an.analyze_historical_correlations(po)
+    an.analyze_historical_correlations(po, '2019-01-01')
     print(an.extract_historical_index_data('ezu', '2021-01-01'))
 
     print(po)
