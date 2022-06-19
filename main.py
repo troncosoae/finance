@@ -1,26 +1,39 @@
-import pandas as pd
-import pandas_datareader.data as web
+from kernel.index import IndexFactory
+from extraction.interface import PandasInterface
 
-from data_extract.pandas_interface import PandasInterface
-from portfolio.manager import Portfolio
-from portfolio.analysis import Analyzer
+
+def main():
+    json = {
+        "indexes": {
+            "ivv": "ivv",
+            "ezu": "ezu",
+            "ewg": "ewg"
+        },
+        "index_groups": {
+            "fintual": [
+                "ivv",
+                "ezu"
+            ],
+            "bchile": [
+                "ivv",
+                "ewg",
+                "fintual"
+            ]
+        }
+    }
+    index_universe = {}
+    # TODO: maybe make these a special class in order to separate what goes into each
+    index_factory = IndexFactory(json, index_universe)
+
+    print(index_universe)
+    print(index_universe["fintual"].print_recursive())
+    print(index_universe["bchile"].print_recursive())
+
+    pandas_interface = PandasInterface()
+    x = pandas_interface.extract_index(index_universe["ezu"], "01-01-2021", "01-01-2022")
+    print(x)
+    # pandas_interface.extract_index(index_universe["bchile"], "01-01-2021", "01-01-2022")
 
 
 if __name__ == "__main__":
-    print("hello world")
-
-    pi = PandasInterface()
-    ezu = pi.extract_index(index='ezu', source='yahoo', start_time='2021-01-01', end_time='2022-01-01')
-
-    print(ezu)
-
-    po = Portfolio(['ezu', 'ivv', 'ewg'])
-    # po.add_index('ezu')
-    # po.add_index('ivv')
-    # po.add_index('ezu')
-
-    an = Analyzer()
-    an.analyze_historical_correlations(po, '2019-01-01')
-    print(an.extract_historical_index_data('ezu', '2021-01-01'))
-
-    print(po)
+    main()
