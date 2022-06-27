@@ -1,78 +1,85 @@
-import itertools
+from itertools import count
 
 
 class AbstractIndexGroup:
-    new_id = itertools.count().__next__
-    def __init__(self, name):
+    new_id = count().__next__
+
+    def __init__(self, key):
         self.id = AbstractIndexGroup.new_id()
-        self.name = name
+        self.key = key
 
+
+# Node leaf
 class Index(AbstractIndexGroup):
-    new_index_id = itertools.count().__next__
-    def __init__(self, src_name, name=None):
-        # TODO: names must be unique
-        self.index_id = Index.new_index_id()
+    new_id = count().__next__
+
+    def __init__(self, src_name, key=None):
+        self.index_id = Index.new_id()
         self.src_name = src_name
-        name = src_name if name is None else name
-        AbstractIndexGroup.__init__(self, name)
+        key = src_name if key is None else key
+        AbstractIndexGroup.__init__(self, key)
 
     def __str__(self):
-        return f"{self.name}({self.src_name}): -"
+        return f"{self.key}({self.src_name}): -"
 
 
+# Node other than leaf.
 class IndexGroup(AbstractIndexGroup):
-    new_group_id = itertools.count().__next__
-    def __init__(self, name):
-        # TODO: names must be unique
-        self.group_id = IndexGroup.new_group_id()
-        AbstractIndexGroup.__init__(self, name)
+    new_id = count().__next__
+
+    def __init__(self, key):
+        self.group_id = IndexGroup.new_id()
+        AbstractIndexGroup.__init__(self, key)
         self.indexes = {}
+        self.index_weights = {}
 
     def __str__(self):
-        return f"{self.name}: "
-    
+        return f"{self.key}: "
+
     def print_recursive(self, steps=0):
-        print("\t"*steps + str(self))
+        print(self)
         for index_key in self.indexes:
+            print(
+                "\t"*steps + f"{self.index_weights[index_key]:.3f}",
+                end=" -> "
+            )
             if isinstance(self.indexes[index_key], IndexGroup):
                 self.indexes[index_key].print_recursive(steps=steps+1)
             elif isinstance(self.indexes[index_key], Index):
-                print("\t"*(steps+1) + str(self.indexes[index_key]))
-    
-    def add_index(self, index):
+                print(self.indexes[index_key])
+
+    def add_index(self, index, weight):
         assert isinstance(index, AbstractIndexGroup)
+        assert index.id not in self.indexes
+        assert index.id not in self.index_weights
+        self.__check_weight_correction()
+        assert weight <= 1
         self.indexes[index.id] = index
+        prev_portion = 1 - weight
+        for index_id in self.index_weights:
+            self.index_weights[index_id] = \
+                self.index_weights[index_id]*prev_portion
+        self.index_weights[index.id] = weight
 
+    def add_multiple_indexes(self, indexes, index_weights):
+        assert isinstance(index_weights, dict)
+        assert isinstance(indexes, dict)
+        assert len(indexes) == len(index_weights)
+        sum = 0
+        for index_key in indexes:
+            assert index_key in index_weights
+            assert isinstance(indexes[index_key], AbstractIndexGroup)
+            sum += index_weights[index_key]
+            self.indexes[index_key] = indexes[index_key]
+            self.index_weights[index_key] = index_weights[index_key]
+        assert sum == 1
 
-class IndexFactory:
-    def __init__(self, json, index_universe):
-        self.json = json
-        self.index_universe = index_universe
-        self.process_json(json)
-    
-    def process_json(self, json):
-        self.process_json_indexes(json["indexes"])
-        self.process_json_index_groups(json["index_groups"])
-    
-    def process_json_indexes(self, json):
-        for index_key in json:
-            self.index_universe[index_key] = Index(json[index_key], index_key)
-    
-    def process_json_index_groups(self, json):
-        for group_key in json:
-            self.index_universe[group_key] = IndexGroup(group_key)
-            for index_key in json[group_key]:
-                self.index_universe[group_key].add_index(
-                    self.index_universe[index_key]
-                )
-
-
-class IndexSession:
-    def __init__(self):
-        self.index_universe = {}
-    
-    def get_index(self, key):
-        return self.index_universe[key]
-    
-    def enter_index(self, key, index):
-        self.index_universe[key] = index
+    def __check_weight_correction(self):
+        sum = 0
+        assert len(self.indexes) == len(self.index_weights)
+        if len(self.index_weights) == 0:
+            return
+        for index_id in self.index_weights:
+            assert index_id in self.indexes
+            sum += self.index_weights[index_id]
+        assert sum == 1

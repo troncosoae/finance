@@ -24,6 +24,8 @@ An *Index* is the atomic piece, it cannot be divided.
 Many *Index*es may be combined into *IndexGroup*s. 
 In turn, *IndexGroup*s may be combined with other *Index*es or *IndexGroup*s to create an *IndexGroup*. 
 
+Note that an *Index* works as the leaf of any tree that can be constructed by combining indexes. In contrast, an *IndexGroup* works like any node that is not a leaf. 
+
 ### Data Extractors
 
 *DataExtractors* can retrieve data from a source into an *Index*. 
